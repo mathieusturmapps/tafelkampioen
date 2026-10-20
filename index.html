@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Tafelkampioen</title>
+<meta name="theme-color" content="#FAFBFE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A332E" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tafelkampioen">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+}
+</script>
+<style>
+@font-face { font-family: "Baloo 2"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/baloo-2-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Baloo 2"; font-weight: 800; font-style: normal; font-display: swap; src: url("fonts/baloo-2-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Lexend"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/lexend-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Lexend"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/lexend-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Lexend"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/lexend-latin-600-normal.woff2") format("woff2"); }
+/* Layout: ruitjespapier (licht) of schoolbord (donker). Setup: tafelkeuze links, instellingen en start rechts. Oefening: som links, cijfertoetsen rechts. */
+:root {
+  --bg: #FAFBFE;
+  --grid: #DCE5F4;
+  --panel: #FFFFFF;
+  --ink: #1C3C98;
+  --shade: #0F2570;
+  --on-ink: #FFFFFF;
+  --text: #1B2340;
+  --muted: #566180;
+  --line: #B7C4E0;
+  --marker: #FFD84A;
+  --on-marker: #1B2340;
+  --good: #177A4B;
+  --good-bg: #DDF3E6;
+  --bad: #C93434;
+  --bad-bg: #FBE0E0;
+  --font-display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1A332E;
+    --grid: #27483F;
+    --panel: #20403A;
+    --ink: #A8CBFF;
+    --shade: #5C85BF;
+    --on-ink: #14302A;
+    --text: #EDF1E6;
+    --muted: #AFC2B8;
+    --line: #42685C;
+    --marker: #E9C84B;
+    --on-marker: #1A332E;
+    --good: #8EE0AC;
+    --good-bg: #24503E;
+    --bad: #FF9A92;
+    --bad-bg: #5A2E2E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A332E;
+  --grid: #27483F;
+  --panel: #20403A;
+  --ink: #A8CBFF;
+  --shade: #5C85BF;
+  --on-ink: #14302A;
+  --text: #EDF1E6;
+  --muted: #AFC2B8;
+  --line: #42685C;
+  --marker: #E9C84B;
+  --on-marker: #1A332E;
+  --good: #8EE0AC;
+  --good-bg: #24503E;
+  --bad: #FF9A92;
+  --bad-bg: #5A2E2E;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html { height: 100%; }
+body {
+  min-height: 100%;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.45;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(36px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
+.wrap { max-width: 1040px; margin-inline: auto; }
+
+h1 {
+  margin: 0;
+  font: 800 clamp(2.3rem, 5vw, 3.3rem)/1 var(--font-display);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.lead { margin: 10px 0 0; max-width: 54ch; color: var(--muted); }
+
+/* Setup */
+.setup { display: grid; gap: 18px; margin-top: 24px; }
+@media (min-width: 900px) {
+  .setup { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+}
+.panel {
+  min-width: 0;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+}
+.panel h2 {
+  margin: 0;
+  font: 600 0.78rem/1.2 var(--font-body);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  margin-bottom: 14px;
+}
+.quick { display: flex; gap: 8px; flex-wrap: wrap; }
+.small-btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+.small-btn:active { background: var(--grid); }
+
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 560px) { .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.tile {
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 6px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  color: var(--text);
+  transition: transform 0.08s ease;
+}
+.tile:active { transform: scale(0.96); }
+.tile .num {
+  padding: 0 0.18em;
+  font: 800 clamp(2.4rem, 6vw, 3.3rem)/1.05 var(--font-display);
+  color: var(--ink);
+  background: linear-gradient(transparent 52%, var(--marker) 52%, var(--marker) 90%, transparent 90%);
+}
+.tile .lab { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 500; }
+.tile[data-state="known"] {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--line);
+  color: var(--muted);
+}
+.tile[data-state="known"] .num { background: none; color: var(--muted); }
+.tile[data-state="later"] {
+  background: repeating-linear-gradient(135deg, transparent 0 7px, var(--grid) 7px 9px);
+  border: 2px dotted var(--line);
+  color: var(--muted);
+}
+.tile[data-state="later"] .num { background: none; color: var(--muted); text-decoration: line-through; text-decoration-thickness: 0.06em; }
+.legend { margin: 14px 0 0; font-size: 0.88rem; color: var(--muted); }
+
+.field { display: grid; gap: 10px; }
+.field + .field { margin-top: 22px; }
+.seg { display: flex; border: 1.5px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.seg button {
+  flex: 1;
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px 6px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.seg button + button { border-left: 1.5px solid var(--ink); }
+.seg button small { display: block; font-weight: 400; font-size: 0.82rem; opacity: 0.85; }
+.seg button[aria-checked="true"] { background: var(--ink); color: var(--on-ink); }
+.seg.compact button { min-height: 52px; font-size: 1.1rem; }
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.switch .track {
+  flex: none;
+  position: relative;
+  width: 54px;
+  height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+.switch .track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.15s ease;
+}
+.switch[aria-checked="true"] .track { background: var(--ink); }
+.switch[aria-checked="true"] .track::after { transform: translateX(22px); background: var(--on-ink); }
+.switch .txt { display: block; font-weight: 500; }
+.switch .txt small { display: block; font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+
+.start { display: grid; gap: 12px; }
+.summary { margin: 0; color: var(--muted); min-height: 2.9em; }
+.primary {
+  width: 100%;
+  min-height: 68px;
+  padding: 14px 24px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font: 800 1.7rem/1 var(--font-display);
+  box-shadow: 0 5px 0 var(--shade);
+}
+.primary:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 var(--shade); }
+.primary:disabled { opacity: 0.45; box-shadow: none; }
+.primary.alt { background: transparent; color: var(--ink); border: 2px solid var(--ink); box-shadow: 0 4px 0 var(--ink); }
+
+/* Quiz */
+.quiz-top { display: flex; align-items: center; gap: 14px; }
+.quiz-top .small-btn { flex: none; background: var(--panel); }
+.progress { flex: 1; display: flex; gap: 3px; min-width: 0; }
+.progress span { flex: 1; min-width: 0; height: 14px; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--panel); }
+.progress span.on { background: var(--ink); }
+.count { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+.quiz-body { display: grid; gap: 22px; margin-top: 22px; align-items: center; }
+@media (min-width: 860px) {
+  .quiz-body { grid-template-columns: minmax(0, 1fr) minmax(300px, 400px); gap: 40px; margin-top: 44px; }
+}
+.sheet {
+  min-width: 0;
+  min-height: clamp(220px, 30vh, 360px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: clamp(20px, 4vw, 44px);
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+}
+.expr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1em 0.3em;
+  font: 800 clamp(3rem, 10vw, 6.4rem)/1.1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.answer {
+  display: inline-block;
+  min-width: 2.1ch;
+  padding: 0 0.1em;
+  text-align: center;
+  border-bottom: 0.08em solid var(--ink);
+}
+.answer:empty::before {
+  content: "";
+  display: inline-block;
+  width: 0.05em;
+  height: 0.75em;
+  vertical-align: -0.05em;
+  background: var(--ink);
+  animation: blink 1s steps(1) infinite;
+}
+.answer.right { color: var(--good); border-color: var(--good); }
+.answer.wrong { border-color: var(--bad); animation: shake 0.4s; }
+.answer .x { margin-right: 0.3em; color: var(--bad); text-decoration: line-through; text-decoration-thickness: 0.06em; }
+.answer .fix { color: var(--good); }
+.feedback { margin: 0; min-height: 3.4em; font-size: 1.1rem; font-weight: 500; color: var(--muted); }
+.feedback.right { color: var(--good); }
+.feedback.wrong { color: var(--bad); }
+.pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 420px; margin-inline: auto; }
+.key {
+  height: clamp(62px, 9.5vh, 88px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ink);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--ink);
+  font: 800 clamp(1.7rem, 4vw, 2.3rem)/1 var(--font-display);
+  box-shadow: 0 3px 0 var(--ink);
+}
+.key:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.key.go { background: var(--ink); color: var(--on-ink); font-size: 1.35rem; }
+.key:disabled { opacity: 0.45; box-shadow: none; }
+.key svg { width: 30px; height: 30px; }
+
+/* Done */
+.done-wrap { max-width: 720px; margin-inline: auto; display: grid; gap: 18px; }
+.score { margin: 0; font: 800 clamp(2.6rem, 8vw, 4.2rem)/1 var(--font-display); color: var(--ink); }
+.score small { font: 500 1.1rem/1.3 var(--font-body); color: var(--muted); margin-left: 0.4em; }
+.msg { margin: 8px 0 0; color: var(--muted); }
+.row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.row:first-of-type { border-top: 0; }
+.row .n { font: 800 2rem/1 var(--font-display); color: var(--ink); text-align: center; }
+.row .t { font-size: 0.92rem; margin-bottom: 6px; }
+.bar { height: 12px; border: 1.5px solid var(--ink); border-radius: 3px; overflow: hidden; background: var(--panel); }
+.bar i { display: block; height: 100%; background: var(--ink); }
+.chip { font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1.5px solid; white-space: nowrap; }
+.chip.good { color: var(--good); background: var(--good-bg); border-color: var(--good); }
+.chip.work { color: var(--on-marker); background: var(--marker); border-color: var(--marker); }
+.suggest p { margin: 0 0 12px; }
+.suggest .small-btn { background: var(--panel); border-color: var(--ink); color: var(--ink); font-weight: 600; }
+.suggest > div + div { margin-top: 18px; }
+.actions { display: grid; gap: 14px; }
+@media (min-width: 560px) { .actions { grid-template-columns: 1fr 1fr; } }
+
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes shake { 20% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 80% { transform: translateX(-4px); } }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <section id="view-setup">
+    <h1>Tafelkampioen</h1>
+    <p class="lead">Tik op een tafel om te wisselen tussen oefenen, gekend en nog niet gezien in de klas. Je krijgt alleen sommen uit de tafels die je oefent.</p>
+
+    <div class="setup">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Welke tafels?</h2>
+          <div class="quick">
+            <button type="button" class="small-btn" id="allPractice">Alles oefenen</button>
+            <button type="button" class="small-btn" id="allKnown">Alles gekend</button>
+          </div>
+        </div>
+        <div class="tiles" id="tiles"></div>
+        <p class="legend">Geel gemarkeerd: je oefent die tafel. Streepjeslijn: je kent die tafel al. Doorgestreept en gearceerd: de juf heeft die tafel nog niet gezien, die komt niet aan bod.</p>
+      </div>
+
+      <div class="panel">
+        <div class="field">
+          <h2 id="lblMode">Wat oefen je?</h2>
+          <div class="seg" role="radiogroup" aria-labelledby="lblMode">
+            <button type="button" role="radio" data-mode="mal">Maal<small>7 × 8</small></button>
+            <button type="button" role="radio" data-mode="deel">Delen<small>56 : 7</small></button>
+            <button type="button" role="radio" data-mode="mix">Door elkaar<small>× en :</small></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <h2 id="lblCount">Aantal vragen</h2>
+          <div class="seg compact" role="radiogroup" aria-labelledby="lblCount">
+            <button type="button" role="radio" data-count="10">10</button>
+            <button type="button" role="radio" data-count="20">20</button>
+            <button type="button" role="radio" data-count="30">30</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <button type="button" class="switch" id="review" role="switch" aria-checked="true">
+            <span class="track" aria-hidden="true"></span>
+            <span class="txt">Gekende tafels af en toe herhalen<small>Ongeveer één vraag op vijf komt uit een tafel die je kent.</small></span>
+          </button>
+        </div>
+
+        <div class="field start">
+          <p class="summary" id="summary"></p>
+          <button type="button" class="primary" id="start">Start</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-quiz" hidden>
+    <div class="quiz-top">
+      <button type="button" class="small-btn" id="stop">Stoppen</button>
+      <div class="progress" id="progress" role="progressbar" aria-label="Voortgang" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"></div>
+      <div class="count" id="count">0 / 10</div>
+    </div>
+    <div class="quiz-body">
+      <div class="sheet">
+        <div class="expr" id="expr"><span id="qText"></span><span>=</span><span class="answer" id="answer"></span></div>
+        <p class="feedback" id="feedback" aria-live="polite"></p>
+      </div>
+      <div class="pad" id="pad">
+        <button type="button" class="key" data-k="1">1</button>
+        <button type="button" class="key" data-k="2">2</button>
+        <button type="button" class="key" data-k="3">3</button>
+        <button type="button" class="key" data-k="4">4</button>
+        <button type="button" class="key" data-k="5">5</button>
+        <button type="button" class="key" data-k="6">6</button>
+        <button type="button" class="key" data-k="7">7</button>
+        <button type="button" class="key" data-k="8">8</button>
+        <button type="button" class="key" data-k="9">9</button>
+        <button type="button" class="key" id="del" aria-label="Wissen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11v14H9L3 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button type="button" class="key" data-k="0">0</button>
+        <button type="button" class="key go" id="go">OK</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-done" hidden>
+    <div class="done-wrap">
+      <div>
+        <h1>Klaar!</h1>
+        <p class="score" id="score"></p>
+        <p class="msg" id="msg"></p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Per tafel</h2></div>
+        <div id="stats"></div>
+      </div>
+      <div class="panel suggest" id="suggest" hidden></div>
+      <div class="actions">
+        <button type="button" class="primary" id="again">Nog eens oefenen</button>
+        <button type="button" class="primary alt" id="back">Tafels kiezen</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'tafelmeester.v1';
+  var ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  var CHECK = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var state = { known: [], later: [], mode: 'mal', count: 10, review: true };
+  var S = null, timer = null, stopTimer = null, stopArmed = false;
+
+  function $(id) { return document.getElementById(id); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var s = JSON.parse(raw);
+      if (Array.isArray(s.known)) state.known = s.known.filter(function (n) { return ALL.indexOf(n) > -1; });
+      if (Array.isArray(s.later)) state.later = s.later.filter(function (n) { return ALL.indexOf(n) > -1 && state.known.indexOf(n) < 0; });
+      if (['mal', 'deel', 'mix'].indexOf(s.mode) > -1) state.mode = s.mode;
+      if ([10, 20, 30].indexOf(s.count) > -1) state.count = s.count;
+      if (typeof s.review === 'boolean') state.review = s.review;
+    } catch (e) { /* opslag niet beschikbaar */ }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* opslag niet beschikbaar */ }
+  }
+
+  function practiceList() { return ALL.filter(function (n) { return state.known.indexOf(n) < 0 && state.later.indexOf(n) < 0; }); }
+  function listNL(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' en ' + a[a.length - 1] : String(a[0]); }
+  function show(name) {
+    ['setup', 'quiz', 'done'].forEach(function (v) { $('view-' + v).hidden = (v !== name); });
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- Setup ---------- */
+  var tilesEl = $('tiles');
+  ALL.forEach(function (n) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tile';
+    b.dataset.n = n;
+    b.setAttribute('aria-label', 'Tafel ' + n + ' oefenen');
+    b.innerHTML = '<span class="num">' + n + '</span><span class="lab"></span>';
+    tilesEl.appendChild(b);
+  });
+  tilesEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.tile');
+    if (!b) return;
+    var n = +b.dataset.n, i = state.known.indexOf(n), j = state.later.indexOf(n);
+    /* oefenen -> gekend -> nog niet gezien -> oefenen */
+    if (i > -1) { state.known.splice(i, 1); state.later.push(n); }
+    else if (j > -1) { state.later.splice(j, 1); }
+    else { state.known.push(n); }
+    save(); renderSetup();
+  });
+  $('allPractice').addEventListener('click', function () { state.known = []; state.later = []; save(); renderSetup(); });
+  $('allKnown').addEventListener('click', function () { state.known = ALL.slice(); state.later = []; save(); renderSetup(); });
+  document.querySelectorAll('[data-mode]').forEach(function (b) {
+    b.addEventListener('click', function () { state.mode = b.dataset.mode; save(); renderSetup(); });
+  });
+  document.querySelectorAll('[data-count]').forEach(function (b) {
+    b.addEventListener('click', function () { state.count = +b.dataset.count; save(); renderSetup(); });
+  });
+  $('review').addEventListener('click', function () { state.review = !state.review; save(); renderSetup(); });
+  $('start').addEventListener('click', startSession);
+
+  function renderSetup() {
+    tilesEl.querySelectorAll('.tile').forEach(function (b) {
+      var n = +b.dataset.n;
+      var st = state.known.indexOf(n) > -1 ? 'known' : state.later.indexOf(n) > -1 ? 'later' : 'practice';
+      var name = st === 'known' ? 'gekend' : st === 'later' ? 'nog niet gezien' : 'oefenen';
+      b.dataset.state = st;
+      b.setAttribute('aria-label', 'Tafel ' + n + ': ' + name + '. Tik om te wisselen.');
+      b.querySelector('.lab').innerHTML = st === 'known' ? CHECK + 'gekend' : name;
+    });
+    document.querySelectorAll('[data-mode]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)); });
+    document.querySelectorAll('[data-count]').forEach(function (b) { b.setAttribute('aria-checked', String(+b.dataset.count === state.count)); });
+    $('review').setAttribute('aria-checked', String(state.review));
+    var prac = practiceList();
+    var sum = !prac.length
+      ? 'Er is geen tafel om te oefenen. Zet er minstens één op oefenen.'
+      : prac.length === ALL.length ? 'Je oefent alle tafels.' : 'Je oefent tafel ' + listNL(prac) + '.';
+    if (prac.length && state.later.length) {
+      var lat = state.later.slice().sort(function (a, b) { return a - b; });
+      sum += ' Tafel ' + listNL(lat) + ' komt nog niet aan bod.';
+    }
+    $('summary').textContent = sum;
+    $('start').disabled = !prac.length;
+  }
+
+  /* ---------- Vragen maken ---------- */
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function drawer(tables) {
+    var bag = [];
+    return function () {
+      if (!bag.length) {
+        tables.forEach(function (t) { for (var f = 1; f <= 10; f++) bag.push([t, f]); });
+        shuffle(bag);
+      }
+      return bag.pop();
+    };
+  }
+  function build() {
+    var drawPrac = drawer(practiceList());
+    var drawKnown = (state.known.length && state.review) ? drawer(state.known) : null;
+    var out = [];
+    for (var i = 0; i < state.count; i++) {
+      var pair, tries = 0, last = out[out.length - 1];
+      do {
+        pair = (drawKnown && Math.random() < 0.2) ? drawKnown() : drawPrac();
+        tries++;
+      } while (last && last.t === pair[0] && last.f === pair[1] && tries < 6);
+      var t = pair[0], f = pair[1];
+      var type = state.mode === 'mix' ? (Math.random() < 0.5 ? 'mal' : 'deel') : state.mode;
+      var q = { id: i, t: t, f: f, type: type };
+      if (type === 'mal') {
+        var swap = Math.random() < 0.5;
+        q.text = (swap ? f : t) + ' × ' + (swap ? t : f);
+        q.ans = t * f;
+      } else {
+        q.text = (t * f) + ' : ' + t;
+        q.ans = f;
+      }
+      out.push(q);
+    }
+    return out;
+  }
+
+  /* ---------- Oefening ---------- */
+  function startSession() {
+    if (!practiceList().length) return;
+    var qs = build();
+    S = { queue: qs.slice(), total: qs.length, solved: {}, solvedN: 0, first: {}, stat: {}, input: '', phase: 'answer', cur: null, knownAtStart: state.known.slice() };
+    var p = $('progress');
+    p.innerHTML = '';
+    for (var i = 0; i < S.total; i++) p.appendChild(document.createElement('span'));
+    p.setAttribute('aria-valuemax', S.total);
+    disarmStop();
+    show('quiz');
+    next();
+  }
+  function updateProgress() {
+    var spans = $('progress').children;
+    for (var i = 0; i < spans.length; i++) spans[i].className = i < S.solvedN ? 'on' : '';
+    $('progress').setAttribute('aria-valuenow', S.solvedN);
+    $('count').textContent = S.solvedN + ' / ' + S.total;
+  }
+  function setPad(disabled) {
+    document.querySelectorAll('#pad .key[data-k], #del').forEach(function (k) { k.disabled = disabled; });
+  }
+  function next() {
+    clearTimeout(timer);
+    if (!S.queue.length) { finish(); return; }
+    S.cur = S.queue.shift();
+    S.input = '';
+    S.phase = 'answer';
+    $('qText').textContent = S.cur.text;
+    $('expr').setAttribute('aria-label', S.cur.text.replace('×', 'maal').replace(':', 'gedeeld door'));
+    var a = $('answer'); a.className = 'answer'; a.textContent = '';
+    var f = $('feedback'); f.className = 'feedback'; f.textContent = '';
+    $('go').textContent = 'OK';
+    setPad(false);
+    updateProgress();
+  }
+  function press(d) {
+    if (!S || S.phase !== 'answer' || S.input.length >= 3) return;
+    S.input = S.input === '0' ? d : S.input + d;
+    $('answer').textContent = S.input;
+  }
+  function backspace() {
+    if (!S || S.phase !== 'answer') return;
+    S.input = S.input.slice(0, -1);
+    $('answer').textContent = S.input;
+  }
+  var PRAISE = ['Juist!', 'Goed zo!', 'Top!', 'Prima!', 'Klopt!'];
+  function submit() {
+    if (!S) return;
+    if (S.phase === 'wrong' || S.phase === 'right') { next(); return; }
+    if (!S.input) return;
+    var q = S.cur, ok = Number(S.input) === q.ans;
+    if (!(q.id in S.first)) {
+      S.first[q.id] = ok;
+      var st = S.stat[q.t] || (S.stat[q.t] = { n: 0, ok: 0 });
+      st.n++; if (ok) st.ok++;
+    }
+    var a = $('answer'), f = $('feedback');
+    setPad(true);
+    if (ok) {
+      S.phase = 'right';
+      if (!S.solved[q.id]) { S.solved[q.id] = true; S.solvedN++; }
+      a.className = 'answer right';
+      f.className = 'feedback right';
+      f.textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+      updateProgress();
+      timer = setTimeout(next, 750);
+    } else {
+      S.phase = 'wrong';
+      S.queue.splice(Math.min(S.queue.length, 3), 0, { id: q.id, t: q.t, f: q.f, type: q.type, text: q.text, ans: q.ans });
+      a.className = 'answer wrong';
+      a.innerHTML = '<span class="x">' + S.input + '</span><span class="fix">' + q.ans + '</span>';
+      f.className = 'feedback wrong';
+      f.textContent = 'Nog niet juist. ' + q.text + ' = ' + q.ans + '. Je krijgt deze som straks nog eens.';
+      $('go').textContent = 'Verder';
+    }
+  }
+  $('pad').addEventListener('click', function (e) {
+    var k = e.target.closest('.key');
+    if (!k) return;
+    if (k.dataset.k !== undefined) press(k.dataset.k);
+    else if (k.id === 'del') backspace();
+    else if (k.id === 'go') submit();
+  });
+  document.addEventListener('keydown', function (e) {
+    if ($('view-quiz').hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('#stop')) return;
+    if (/^[0-9]$/.test(e.key)) { press(e.key); e.preventDefault(); }
+    else if (e.key === 'Backspace') { backspace(); e.preventDefault(); }
+    else if (e.key === 'Enter') { submit(); e.preventDefault(); }
+  });
+  function disarmStop() {
+    stopArmed = false;
+    clearTimeout(stopTimer);
+    $('stop').textContent = 'Stoppen';
+  }
+  $('stop').addEventListener('click', function () {
+    if (!stopArmed) {
+      stopArmed = true;
+      $('stop').textContent = 'Zeker stoppen?';
+      stopTimer = setTimeout(disarmStop, 3000);
+      return;
+    }
+    disarmStop();
+    clearTimeout(timer);
+    S = null;
+    renderSetup();
+    show('setup');
+  });
+
+  /* ---------- Uitslag ---------- */
+  function finish() {
+    clearTimeout(timer);
+    var firstOk = 0, id;
+    for (id in S.first) { if (S.first[id]) firstOk++; }
+    var tables = Object.keys(S.stat).map(Number).sort(function (a, b) { return a - b; });
+    S.perfect = tables.filter(function (t) { return S.stat[t].n >= 2 && S.stat[t].ok === S.stat[t].n && S.knownAtStart.indexOf(t) < 0; });
+    S.weak = tables.filter(function (t) { return S.knownAtStart.indexOf(t) > -1 && S.stat[t].ok < S.stat[t].n; });
+    S.didKnown = false; S.didBack = false;
+
+    $('score').innerHTML = firstOk + ' van ' + S.total + '<small>meteen juist</small>';
+    var ratio = firstOk / S.total;
+    var msg = ratio >= 0.9 ? 'Prima gewerkt.' : ratio >= 0.7 ? 'Goed bezig.' : 'Blijven oefenen, het komt goed.';
+    if (firstOk < S.total) msg += ' Wat fout ging, kwam nog eens terug en is nu juist.';
+    $('msg').textContent = msg;
+
+    var stats = $('stats');
+    stats.innerHTML = '';
+    tables.forEach(function (t) {
+      var st = S.stat[t], perfect = st.ok === st.n;
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<div class="n">' + t + '</div>' +
+        '<div><div class="t">' + st.ok + ' van ' + st.n + ' meteen juist</div><div class="bar"><i style="width:' + Math.round(st.ok / st.n * 100) + '%"></i></div></div>' +
+        '<span class="chip ' + (perfect ? 'good' : 'work') + '">' + (perfect ? 'Foutloos' : 'Nog oefenen') + '</span>';
+      stats.appendChild(row);
+    });
+    renderSuggest();
+    show('done');
+  }
+  function renderSuggest() {
+    var box = $('suggest');
+    box.innerHTML = '';
+    box.hidden = !(S.perfect.length || S.weak.length);
+    if (S.perfect.length) {
+      var d1 = document.createElement('div');
+      var many = S.perfect.length > 1;
+      d1.innerHTML = '<p></p>';
+      d1.firstChild.textContent = S.didKnown
+        ? (many ? 'Tafels ' : 'Tafel ') + listNL(S.perfect) + (many ? ' staan' : ' staat') + ' nu op gekend.'
+        : (many ? 'Tafels ' : 'Tafel ') + listNL(S.perfect) + (many ? ' gingen' : ' ging') + ' foutloos. Zet je ' + (many ? 'ze' : 'hem') + ' op gekend?';
+      if (!S.didKnown) {
+        var b1 = document.createElement('button');
+        b1.type = 'button'; b1.className = 'small-btn'; b1.textContent = 'Zet op gekend';
+        b1.addEventListener('click', function () {
+          S.perfect.forEach(function (t) { if (state.known.indexOf(t) < 0) state.known.push(t); });
+          S.didKnown = true; save(); renderSuggest();
+        });
+        d1.appendChild(b1);
+      }
+      box.appendChild(d1);
+    }
+    if (S.weak.length) {
+      var d2 = document.createElement('div');
+      var many2 = S.weak.length > 1;
+      d2.innerHTML = '<p></p>';
+      d2.firstChild.textContent = S.didBack
+        ? (many2 ? 'Tafels ' : 'Tafel ') + listNL(S.weak) + (many2 ? ' staan' : ' staat') + ' weer op oefenen.'
+        : (many2 ? 'Tafels ' : 'Tafel ') + listNL(S.weak) + ' stond' + (many2 ? 'en' : '') + ' op gekend, maar daar ging iets mis. Terug naar oefenen?';
+      if (!S.didBack) {
+        var b2 = document.createElement('button');
+        b2.type = 'button'; b2.className = 'small-btn'; b2.textContent = 'Terug naar oefenen';
+        b2.addEventListener('click', function () {
+          state.known = state.known.filter(function (t) { return S.weak.indexOf(t) < 0; });
+          S.didBack = true; save(); renderSuggest();
+        });
+        d2.appendChild(b2);
+      }
+      box.appendChild(d2);
+    }
+  }
+  $('again').addEventListener('click', function () {
+    if (!practiceList().length) { renderSetup(); show('setup'); return; }
+    startSession();
+  });
+  $('back').addEventListener('click', function () { renderSetup(); show('setup'); });
+
+  load();
+  renderSetup();
+})();
+</script>
+</body>
+</html>
