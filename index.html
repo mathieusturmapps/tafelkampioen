@@ -372,6 +372,29 @@ h1 {
 .actions { display: grid; gap: 14px; }
 @media (min-width: 560px) { .actions { grid-template-columns: 1fr 1fr; } }
 
+
+[hidden] { display: none !important; }
+.stars { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.star svg { display: block; width: 28px; height: 28px; stroke-linejoin: round; }
+.star.on svg { fill: var(--marker); stroke: var(--ink); stroke-width: 1.5; }
+.star.off svg { fill: none; stroke: var(--line); stroke-width: 1.6; stroke-dasharray: 2.5 2.5; }
+.gamebox { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.gamebox .summary { min-height: 0; }
+.gamebox .primary { min-height: 60px; font-size: 1.35rem; }
+.qmeter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 14px; font-weight: 500; }
+.qmeter .star svg { width: 22px; height: 22px; }
+.qmeter .mtxt { font-size: 0.92rem; color: var(--muted); }
+.reward { display: grid; gap: 12px; }
+.reward p { margin: 0; }
+.reward .primary { min-height: 60px; font-size: 1.35rem; }
+.gwrap { display: flex; justify-content: center; margin-top: 14px; }
+#gc { display: block; border-radius: 10px; border: 2px solid var(--ink); background: #0E1633; touch-action: none; max-width: 100%; }
+.ghint { text-align: center; color: var(--muted); margin: 10px 0 0; font-size: 0.92rem; }
+.gtitle { margin: 0; font: 800 1.2rem/1.1 var(--font-display); color: var(--ink); flex: 1; text-align: right; }
+.gend { max-width: 460px; margin: 16px auto 0; text-align: center; display: grid; gap: 12px; }
+.gend p { margin: 0; }
+.gend .score { font-size: clamp(2rem, 7vw, 3rem); }
+
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes shake { 20% { transform: translateX(-8px); } 50% { transform: translateX(8px); } 80% { transform: translateX(-4px); } }
 @media (prefers-reduced-motion: reduce) {
@@ -398,6 +421,12 @@ h1 {
         </div>
         <div class="tiles" id="tiles"></div>
         <p class="legend">Geel gemarkeerd: je oefent die tafel. Streepjeslijn: je kent die tafel al. Doorgestreept en gearceerd: de juf heeft die tafel nog niet gezien, die komt niet aan bod.</p>
+        <div class="gamebox">
+          <h2>Spelletje</h2>
+          <div class="stars" id="setupStars"></div>
+          <p class="summary" id="gameNote"></p>
+          <button type="button" class="primary alt" id="playBtn" hidden>Speel Ruimte-invaders</button>
+        </div>
       </div>
 
       <div class="panel">
@@ -426,9 +455,20 @@ h1 {
           </button>
         </div>
 
+        <div class="field">
+          <h2 id="lblGoal">Foutloze reeksen voor een spel</h2>
+          <div class="seg compact" role="radiogroup" aria-labelledby="lblGoal">
+            <button type="button" role="radio" data-goal="2">2</button>
+            <button type="button" role="radio" data-goal="3">3</button>
+            <button type="button" role="radio" data-goal="4">4</button>
+            <button type="button" role="radio" data-goal="5">5</button>
+          </div>
+        </div>
+
         <div class="field start">
           <p class="summary" id="summary"></p>
           <button type="button" class="primary" id="start">Start</button>
+          <p class="legend" id="storeNote"></p>
         </div>
       </div>
     </div>
@@ -440,6 +480,7 @@ h1 {
       <div class="progress" id="progress" role="progressbar" aria-label="Voortgang" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"></div>
       <div class="count" id="count">0 / 10</div>
     </div>
+    <div class="qmeter" id="qMeter"></div>
     <div class="quiz-body">
       <div class="sheet">
         <div class="expr" id="expr"><span id="qText"></span><span>=</span><span class="answer" id="answer"></span></div>
@@ -462,6 +503,20 @@ h1 {
     </div>
   </section>
 
+  <section id="view-game" hidden>
+    <div class="quiz-top">
+      <button type="button" class="small-btn" id="gStop">Stoppen</button>
+      <p class="gtitle">Ruimte-invaders</p>
+    </div>
+    <div class="gwrap"><canvas id="gc" width="360" height="540" aria-label="Spel: Ruimte-invaders"></canvas></div>
+    <p class="ghint">Sleep met je vinger om het ruimteschip te bewegen. Het schiet vanzelf.</p>
+    <div class="panel gend" id="gEnd" hidden>
+      <p class="score" id="gTitle"></p>
+      <p id="gMsg"></p>
+      <button type="button" class="primary" id="gDone">Klaar</button>
+    </div>
+  </section>
+
   <section id="view-done" hidden>
     <div class="done-wrap">
       <div>
@@ -473,6 +528,7 @@ h1 {
         <div class="panel-head"><h2>Per tafel</h2></div>
         <div id="stats"></div>
       </div>
+      <div class="panel reward" id="reward" hidden></div>
       <div class="panel suggest" id="suggest" hidden></div>
       <div class="actions">
         <button type="button" class="primary" id="again">Nog eens oefenen</button>
@@ -489,7 +545,8 @@ h1 {
   var KEY = 'tafelmeester.v1';
   var ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   var CHECK = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  var state = { known: [], later: [], mode: 'mal', count: 10, review: true };
+  var state = { known: [], later: [], mode: 'mal', count: 10, review: true, goal: 3, series: 0, games: 0, best: 0 };
+  var storageOk = true;
   var S = null, timer = null, stopTimer = null, stopArmed = false;
 
   function $(id) { return document.getElementById(id); }
@@ -504,16 +561,21 @@ h1 {
       if (['mal', 'deel', 'mix'].indexOf(s.mode) > -1) state.mode = s.mode;
       if ([10, 20, 30].indexOf(s.count) > -1) state.count = s.count;
       if (typeof s.review === 'boolean') state.review = s.review;
+      if ([2, 3, 4, 5].indexOf(s.goal) > -1) state.goal = s.goal;
+      ['series', 'games', 'best'].forEach(function (k) {
+        if (typeof s[k] === 'number' && s[k] >= 0 && s[k] < 100000) state[k] = Math.floor(s[k]);
+      });
+      while (state.series >= state.goal) { state.series -= state.goal; state.games++; }
     } catch (e) { /* opslag niet beschikbaar */ }
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* opslag niet beschikbaar */ }
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOk = false; }
   }
 
   function practiceList() { return ALL.filter(function (n) { return state.known.indexOf(n) < 0 && state.later.indexOf(n) < 0; }); }
   function listNL(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' en ' + a[a.length - 1] : String(a[0]); }
   function show(name) {
-    ['setup', 'quiz', 'done'].forEach(function (v) { $('view-' + v).hidden = (v !== name); });
+    ['setup', 'quiz', 'game', 'done'].forEach(function (v) { $('view-' + v).hidden = (v !== name); });
     window.scrollTo(0, 0);
   }
 
@@ -571,6 +633,7 @@ h1 {
     }
     $('summary').textContent = sum;
     $('start').disabled = !prac.length;
+    renderGameInfo();
   }
 
   /* ---------- Vragen maken ---------- */
@@ -625,7 +688,9 @@ h1 {
     p.innerHTML = '';
     for (var i = 0; i < S.total; i++) p.appendChild(document.createElement('span'));
     p.setAttribute('aria-valuemax', S.total);
+    S.flawless = true;
     disarmStop();
+    renderMeter();
     show('quiz');
     next();
   }
@@ -685,6 +750,8 @@ h1 {
       timer = setTimeout(next, 750);
     } else {
       S.phase = 'wrong';
+      S.flawless = false;
+      renderMeter();
       S.queue.splice(Math.min(S.queue.length, 3), 0, { id: q.id, t: q.t, f: q.f, type: q.type, text: q.text, ans: q.ans });
       a.className = 'answer wrong';
       a.innerHTML = '<span class="x">' + S.input + '</span><span class="fix">' + q.ans + '</span>';
@@ -731,6 +798,13 @@ h1 {
     clearTimeout(timer);
     var firstOk = 0, id;
     for (id in S.first) { if (S.first[id]) firstOk++; }
+    S.flawless = (firstOk === S.total);
+    S.earned = false;
+    if (S.flawless) {
+      state.series++;
+      if (state.series >= state.goal) { state.series -= state.goal; state.games++; S.earned = true; }
+      save();
+    }
     var tables = Object.keys(S.stat).map(Number).sort(function (a, b) { return a - b; });
     S.perfect = tables.filter(function (t) { return S.stat[t].n >= 2 && S.stat[t].ok === S.stat[t].n && S.knownAtStart.indexOf(t) < 0; });
     S.weak = tables.filter(function (t) { return S.knownAtStart.indexOf(t) > -1 && S.stat[t].ok < S.stat[t].n; });
@@ -754,6 +828,7 @@ h1 {
       stats.appendChild(row);
     });
     renderSuggest();
+    renderReward();
     show('done');
   }
   function renderSuggest() {
@@ -802,6 +877,278 @@ h1 {
     startSession();
   });
   $('back').addEventListener('click', function () { renderSetup(); show('setup'); });
+
+  /* ---------- Spelletje: teller en beloning ---------- */
+  var STAR = '<svg viewBox="0 0 20 20" aria-hidden="true"><polygon points="10,1.5 12.6,7.2 18.8,7.9 14.2,12.1 15.5,18.2 10,15.1 4.5,18.2 5.8,12.1 1.2,7.9 7.4,7.2"/></svg>';
+  function starsHTML(done, total) {
+    var out = '';
+    for (var i = 0; i < total; i++) out += '<span class="star ' + (i < done ? 'on' : 'off') + '">' + STAR + '</span>';
+    return out;
+  }
+  function leftText(n) { return n === 1 ? 'Nog 1 foutloze reeks' : 'Nog ' + n + ' foutloze reeksen'; }
+  function renderGameInfo() {
+    document.querySelectorAll('[data-goal]').forEach(function (b) { b.setAttribute('aria-checked', String(+b.dataset.goal === state.goal)); });
+    $('setupStars').innerHTML = starsHTML(state.series, state.goal);
+    $('setupStars').setAttribute('aria-label', state.series + ' van ' + state.goal + ' foutloze reeksen');
+    var note = leftText(state.goal - state.series) + ' tot een spel.';
+    if (state.games > 0) note = (state.games === 1 ? 'Je hebt 1 spel verdiend. ' : 'Je hebt ' + state.games + ' spellen verdiend. ') + note;
+    if (state.best > 0) note += ' Beste score: ' + state.best + '.';
+    $('gameNote').textContent = note;
+    $('playBtn').hidden = state.games < 1;
+    $('storeNote').textContent = storageOk
+      ? 'Je keuzes en je spelvoortgang worden op dit toestel bewaard.'
+      : 'Bewaren lukt niet in deze browser. Je keuzes zijn weg als je de pagina sluit.';
+  }
+  function renderMeter() {
+    var el = $('qMeter');
+    if (!el || !S) return;
+    el.innerHTML = starsHTML(state.series, state.goal) + '<span class="mtxt">' +
+      (S.flawless ? leftText(state.goal - state.series) + ' tot een spel' : 'Niet foutloos, de teller blijft staan') + '</span>';
+  }
+  function renderReward() {
+    var box = $('reward');
+    var left = state.goal - state.series;
+    var msg;
+    if (S.earned) msg = 'Foutloze reeks! Je hebt een spel verdiend.';
+    else if (S.flawless) msg = 'Foutloze reeks! ' + leftText(left) + ' tot een spel.';
+    else msg = 'Niet alles meteen juist, dus de teller blijft staan. ' + leftText(left) + ' tot een spel.';
+    box.innerHTML = '<h2>Spelletje</h2><div class="stars">' + starsHTML(state.series, state.goal) + '</div><p></p>';
+    box.querySelector('p').textContent = msg;
+    if (state.games > 0) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'primary';
+      b.textContent = 'Speel Ruimte-invaders';
+      b.addEventListener('click', startGame);
+      box.appendChild(b);
+    }
+    box.hidden = false;
+  }
+  document.querySelectorAll('[data-goal]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.goal = +b.dataset.goal;
+      while (state.series >= state.goal) { state.series -= state.goal; state.games++; }
+      save(); renderSetup();
+    });
+  });
+  $('playBtn').addEventListener('click', startGame);
+
+  /* ---------- Spelletje: Ruimte-invaders ---------- */
+  var GW = 360, GH = 540, SHIPY = 488, COLS = 6, ROWS = 4;
+  var ALIEN_A = ['.##.....##.', '.###...###.', '###########', '##.#####.##', '##.#####.##', '###########', '.###...###.', '.#.......#.'];
+  var ALIEN_B = ['.##.....##.', '.###...###.', '###########', '##.#####.##', '##.#####.##', '###########', '.##.###.##.', '#.........#'];
+  var SHIP_BM = ['.....#.....', '....###....', '....###....', '.#########.', '###########', '###########'];
+  var ROWCOL = ['#FF6B8A', '#FFB84A', '#7BE0A0', '#6FB6FF'];
+  var G = null, raf = 0, gScale = 1, gDpr = 1, gStopTimer = null, gStopArmed = false;
+  var gc = $('gc'), gx = gc.getContext('2d');
+  function makeSprite(rows, color) {
+    var cell = 12, c = document.createElement('canvas');
+    c.width = rows[0].length * cell; c.height = rows.length * cell;
+    var x = c.getContext('2d');
+    x.fillStyle = color;
+    for (var r = 0; r < rows.length; r++) for (var k = 0; k < rows[r].length; k++) if (rows[r][k] === '#') x.fillRect(k * cell, r * cell, cell, cell);
+    return c;
+  }
+  var ALIEN_IMG = ROWCOL.map(function (col) { return [makeSprite(ALIEN_A, col), makeSprite(ALIEN_B, col)]; });
+  var SHIP_IMG = makeSprite(SHIP_BM, '#FFD84A');
+  var BGSTARS = [];
+  for (var si = 0; si < 45; si++) BGSTARS.push({ x: Math.random() * GW, y: Math.random() * GH, r: Math.random() < 0.2 ? 1.6 : 1, p: Math.random() * 6 });
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  function startGame() {
+    if (state.games < 1) return;
+    state.games--;
+    save();
+    gStopArmed = false; clearTimeout(gStopTimer); $('gStop').textContent = 'Stoppen';
+    show('game');
+    initGame();
+  }
+  function initGame() {
+    var inv = [];
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) inv.push({ r: r, c: c, x: 40 + c * 48, y: 64 + r * 36, alive: true });
+    G = { inv: inv, alive: inv.length, total: inv.length, dir: 1, walk: 0, shots: [], bombs: [], fx: [],
+          px: GW / 2, tx: GW / 2, lives: 3, score: 0, fireT: 0.4, bombT: 1.6, t: 0, hit: 0, over: null, last: performance.now(), keys: { l: false, r: false } };
+    $('gEnd').hidden = true;
+    resizeGame();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(tick);
+  }
+  function resizeGame() {
+    if ($('view-game').hidden) return;
+    var availW = Math.min($('view-game').clientWidth, 560);
+    var availH = Math.max(320, window.innerHeight - 190);
+    gScale = Math.min(availW / GW, availH / GH);
+    gDpr = window.devicePixelRatio || 1;
+    gc.style.width = Math.floor(GW * gScale) + 'px';
+    gc.style.height = Math.floor(GH * gScale) + 'px';
+    gc.width = Math.floor(GW * gScale * gDpr);
+    gc.height = Math.floor(GH * gScale * gDpr);
+  }
+  window.addEventListener('resize', resizeGame);
+
+  function tick(now) {
+    if (!G) return;
+    var dt = Math.min(0.05, (now - G.last) / 1000);
+    G.last = now;
+    if (!G.over) update(dt);
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+  function overlap(ax, ay, aw, ah, bx, by, bw, bh) { return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by; }
+  function update(dt) {
+    G.t += dt;
+    var kx = (G.keys.r ? 1 : 0) - (G.keys.l ? 1 : 0);
+    if (kx) G.tx = clamp(G.tx + kx * 320 * dt, 20, GW - 20);
+    G.px += (G.tx - G.px) * Math.min(1, dt * 20);
+    G.hit = Math.max(0, G.hit - dt);
+
+    G.fireT -= dt;
+    if (G.fireT <= 0) { G.shots.push({ x: G.px, y: SHIPY - 6 }); G.fireT = 0.5; }
+    G.shots.forEach(function (s) { s.y -= 440 * dt; });
+    G.shots = G.shots.filter(function (s) { return s.y > -14; });
+
+    var speed = 24 + (G.total - G.alive) / G.total * 78;
+    var minX = 1e9, maxX = -1e9, maxY = 0, i;
+    for (i = 0; i < G.inv.length; i++) {
+      var v = G.inv[i];
+      if (!v.alive) continue;
+      if (v.x < minX) minX = v.x;
+      if (v.x + 33 > maxX) maxX = v.x + 33;
+      if (v.y + 24 > maxY) maxY = v.y + 24;
+    }
+    var dx = G.dir * speed * dt;
+    if ((G.dir > 0 && maxX + dx > GW - 10) || (G.dir < 0 && minX + dx < 10)) {
+      G.dir = -G.dir;
+      G.inv.forEach(function (w) { if (w.alive) w.y += 14; });
+      maxY += 14;
+    } else {
+      G.inv.forEach(function (w) { if (w.alive) w.x += dx; });
+      G.walk += Math.abs(dx);
+    }
+    if (G.alive > 0 && maxY >= SHIPY - 8) { endGame('lose'); return; }
+
+    G.bombT -= dt;
+    if (G.bombT <= 0 && G.alive > 0) {
+      var lowest = {};
+      G.inv.forEach(function (w) { if (w.alive && (!lowest[w.c] || w.r > lowest[w.c].r)) lowest[w.c] = w; });
+      var cols = Object.keys(lowest);
+      var pick = lowest[cols[Math.floor(Math.random() * cols.length)]];
+      G.bombs.push({ x: pick.x + 16, y: pick.y + 24 });
+      G.bombT = Math.max(0.55, 1.5 - (G.total - G.alive) / G.total * 0.8) + Math.random() * 0.8;
+    }
+    G.bombs.forEach(function (b) { b.y += 170 * dt; });
+    G.bombs = G.bombs.filter(function (b) { return b.y < GH + 12; });
+
+    G.shots = G.shots.filter(function (s) {
+      for (var k = 0; k < G.inv.length; k++) {
+        var w = G.inv[k];
+        if (w.alive && overlap(s.x - 2, s.y, 4, 12, w.x, w.y, 33, 24)) {
+          w.alive = false; G.alive--; G.score += 10;
+          G.fx.push({ x: w.x + 16, y: w.y + 12, t: 0 });
+          return false;
+        }
+      }
+      return true;
+    });
+    if (G.hit <= 0) {
+      for (i = 0; i < G.bombs.length; i++) {
+        var bm = G.bombs[i];
+        if (overlap(bm.x - 2, bm.y, 4, 10, G.px - 16, SHIPY, 33, 18)) {
+          G.bombs.splice(i, 1);
+          G.lives--; G.hit = 1.6;
+          G.fx.push({ x: G.px, y: SHIPY + 6, t: 0 });
+          break;
+        }
+      }
+    }
+    G.fx.forEach(function (f) { f.t += dt; });
+    G.fx = G.fx.filter(function (f) { return f.t < 0.35; });
+    if (G.lives <= 0) { endGame('lose'); return; }
+    if (G.alive <= 0) { endGame('win'); }
+  }
+  function draw() {
+    var x = gx;
+    x.setTransform(gScale * gDpr, 0, 0, gScale * gDpr, 0, 0);
+    x.imageSmoothingEnabled = false;
+    x.fillStyle = '#0E1633';
+    x.fillRect(0, 0, GW, GH);
+    BGSTARS.forEach(function (s) {
+      x.globalAlpha = 0.45 + 0.4 * Math.sin(G.t * 1.5 + s.p);
+      x.fillStyle = '#FFFFFF';
+      x.fillRect(s.x, s.y, s.r, s.r);
+    });
+    x.globalAlpha = 1;
+    var frame = Math.floor(G.walk / 10) % 2;
+    G.inv.forEach(function (w) { if (w.alive) x.drawImage(ALIEN_IMG[w.r][frame], w.x, w.y, 33, 24); });
+    if (G.hit <= 0 || Math.floor(G.t * 12) % 2 === 0) x.drawImage(SHIP_IMG, G.px - 16.5, SHIPY, 33, 18);
+    x.fillStyle = '#FFFFFF';
+    G.shots.forEach(function (s) { x.fillRect(s.x - 1.5, s.y, 3, 12); });
+    x.fillStyle = '#FF8A8A';
+    G.bombs.forEach(function (b) { x.fillRect(b.x - 2, b.y, 4, 10); });
+    G.fx.forEach(function (f) {
+      var d = f.t * 90;
+      x.globalAlpha = 1 - f.t / 0.35;
+      x.fillStyle = '#FFD84A';
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (o) { x.fillRect(f.x + o[0] * d - 2, f.y + o[1] * d - 2, 4, 4); });
+    });
+    x.globalAlpha = 1;
+    for (var i = 0; i < G.lives; i++) x.drawImage(SHIP_IMG, 12 + i * 28, 14, 22, 12);
+    x.fillStyle = '#FFFFFF';
+    x.font = '800 18px "Baloo 2", system-ui, sans-serif';
+    x.textAlign = 'right';
+    x.fillText('Score ' + G.score, GW - 12, 26);
+  }
+  function endGame(res) {
+    if (!G || G.over) return;
+    G.over = res;
+    var record = G.score > state.best;
+    if (record) { state.best = G.score; save(); }
+    $('gTitle').textContent = res === 'win' ? 'Gewonnen!' : 'Game over';
+    $('gMsg').textContent = 'Score: ' + G.score + (record ? '. Nieuw record!' : '. Beste score: ' + state.best + '.');
+    $('gEnd').hidden = false;
+    $('gEnd').scrollIntoView({ block: 'nearest' });
+  }
+  function leaveGame() {
+    cancelAnimationFrame(raf);
+    G = null;
+    gStopArmed = false; clearTimeout(gStopTimer); $('gStop').textContent = 'Stoppen';
+    renderSetup();
+    show('setup');
+  }
+  $('gDone').addEventListener('click', leaveGame);
+  $('gStop').addEventListener('click', function () {
+    if (!gStopArmed) {
+      gStopArmed = true;
+      $('gStop').textContent = 'Zeker stoppen?';
+      gStopTimer = setTimeout(function () { gStopArmed = false; $('gStop').textContent = 'Stoppen'; }, 3000);
+      return;
+    }
+    leaveGame();
+  });
+  function gameX(e) { var r = gc.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width * GW, 20, GW - 20); }
+  gc.addEventListener('pointerdown', function (e) {
+    if (!G) return;
+    try { gc.setPointerCapture(e.pointerId); } catch (err) { /* niet nodig */ }
+    G.tx = gameX(e);
+  });
+  gc.addEventListener('pointermove', function (e) { if (G) G.tx = gameX(e); });
+  document.addEventListener('keydown', function (e) {
+    if (!G || $('view-game').hidden) return;
+    if (e.key === 'ArrowLeft' || e.key === 'a') { G.keys.l = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd') { G.keys.r = true; e.preventDefault(); }
+  });
+  document.addEventListener('keyup', function (e) {
+    if (!G) return;
+    if (e.key === 'ArrowLeft' || e.key === 'a') G.keys.l = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') G.keys.r = false;
+  });
+
+  /* ---------- Opslag controleren ---------- */
+  try {
+    localStorage.setItem(KEY + '.test', '1');
+    localStorage.removeItem(KEY + '.test');
+  } catch (e) { storageOk = false; }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* niet erg */ }
 
   load();
   renderSetup();

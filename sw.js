@@ -1,5 +1,5 @@
 /* Zorgt dat Tafelkampioen ook zonder internet start. Verhoog VERSIE na een aanpassing. */
-var VERSIE = 'tafelkampioen-v1';
+var VERSIE = 'tafelkampioen-v2';
 var BESTANDEN = [
   './', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'fonts/baloo-2-latin-600-normal.woff2', 'fonts/baloo-2-latin-800-normal.woff2',
